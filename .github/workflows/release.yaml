@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, pdo_sqlite
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist
+      - run: vendor/bin/phpstan analyse --memory-limit=256M
+      - run: vendor/bin/phpunit
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
