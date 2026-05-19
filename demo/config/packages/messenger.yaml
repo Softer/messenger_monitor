@@ -1,0 +1,17 @@
+framework:
+    messenger:
+        transports:
+            async:
+                dsn: 'doctrine://default'
+                options:
+                    table_name: messenger_messages
+                    queue_name: async
+            failed:
+                dsn: 'doctrine://default'
+                options:
+                    table_name: messenger_messages
+                    queue_name: failed
+        failure_transport: failed
+        routing:
+            App\Message\TestMessage: async
+            App\Message\FailingMessage: async

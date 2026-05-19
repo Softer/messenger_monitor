@@ -1,0 +1,54 @@
+{
+    "name": "softlab/messenger-monitor-bundle",
+    "description": "Symfony Messenger monitoring bundle with Supervisor integration, queue stats, and failed message management",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "keywords": ["symfony", "messenger", "monitor", "supervisor", "queue"],
+    "authors": [
+        {
+            "name": "SoftLab",
+            "email": "sft.nik@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "symfony/messenger": "^7.0|^8.0",
+        "symfony/process": "^7.0|^8.0",
+        "symfony/http-kernel": "^7.0|^8.0",
+        "symfony/dependency-injection": "^7.0|^8.0",
+        "symfony/config": "^7.0|^8.0",
+        "doctrine/dbal": "^3.6|^4.0",
+        "doctrine/persistence": "^3.0|^4.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0",
+        "phpstan/phpstan": "^2.0",
+        "symfony/twig-bundle": "^7.0|^8.0",
+        "symfony/framework-bundle": "^7.0|^8.0",
+        "symfony/doctrine-messenger": "^7.0|^8.0"
+    },
+    "suggest": {
+        "symfony/twig-bundle": "For Twig functions",
+        "symfony/doctrine-messenger": "For Doctrine transport support"
+    },
+    "autoload": {
+        "psr-4": {
+            "SoftLab\\MessengerMonitorBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SoftLab\\MessengerMonitorBundle\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    }
+}

@@ -1,0 +1,16 @@
+services:
+  php:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+
+  demo:
+    build:
+      context: .
+      dockerfile: demo/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    working_dir: /app/demo

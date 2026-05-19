@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Monitor Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+        h1 { margin-bottom: 20px; font-size: 1.4em; }
+        .grid { display: grid; grid-template-columns: 1fr 2fr 1.3fr; gap: 20px; }
+        .panel { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .panel h2 { font-size: 1.1em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { font-weight: 600; color: #666; font-size: 0.85em; text-transform: uppercase; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+        .badge-green { background: #d4edda; color: #155724; }
+        .badge-red { background: #f8d7da; color: #721c24; }
+        .badge-yellow { background: #fff3cd; color: #856404; }
+        .badge-gray { background: #e2e3e5; color: #383d41; }
+        form { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+        label { display: block; font-size: 0.85em; color: #666; margin-bottom: 4px; }
+        input, select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; }
+        input[type="number"] { width: 70px; }
+        button, .btn { padding: 6px 14px; border: none; border-radius: 4px; font-size: 0.85em; cursor: pointer; }
+        .btn-primary { background: #4a90d9; color: #fff; }
+        .btn-primary:hover { background: #357abd; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-sm { padding: 3px 8px; font-size: 0.8em; }
+        .btn-outline { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-outline:hover { background: #f5f5f5; }
+        .btn-outline.active { background: #4a90d9; color: #fff; border-color: #4a90d9; }
+        .checkbox-row { display: flex; align-items: center; gap: 6px; padding-top: 18px; }
+        .checkbox-row input { width: auto; }
+        .empty { color: #999; font-style: italic; padding: 12px 0; }
+        .actions { display: flex; gap: 4px; }
+        .mono { font-family: monospace; font-size: 0.85em; }
+        .refresh-note { font-size: 0.75em; color: #999; float: right; }
+        .filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+        .filters span { font-size: 0.85em; color: #666; }
+    </style>
+</head>
+<body>
+
+<h1>Messenger Monitor Demo</h1>
+
+<div class="grid">
+
+    {# ===== PRODUCER ===== #}
+    <div class="panel">
+        <h2>Producer</h2>
+        <form method="post" action="/produce">
+            <div>
+                <label for="count">Messages</label>
+                <input type="number" id="count" name="count" value="5" min="1" max="100">
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="failing" name="failing" value="1">
+                <label for="failing" style="margin:0; color:#333">Failing</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+    </div>
+
+    {# ===== WORKERS ===== #}
+    <div class="panel">
+        <h2>Workers <span class="refresh-note">auto-refresh 5s</span></h2>
+        <div id="workers-panel">
+            {% set workers = messenger_workers() %}
+            {% set qstats = messenger_history_stats_by_queue() %}
+            {% if workers is empty %}
+                <p class="empty">No workers found</p>
+            {% else %}
+                <table>
+                    <thead>
+                        <tr><th>Name</th><th>Status</th><th>PID</th><th>Uptime</th><th>Handled</th><th>Failed</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    {% for w in workers %}
+                        {% set ws = null %}
+                        {% for queue, s in qstats %}
+                            {% if w.name starts with 'messenger-' and queue == w.name|slice(10) %}
+                                {% set ws = s %}
+                            {% endif %}
+                        {% endfor %}
+                        <tr>
+                            <td class="mono">{{ w.group }}:{{ w.name }}</td>
+                            <td>
+                                {% if w.isRunning %}
+                                    <span class="badge badge-green">RUNNING</span>
+                                {% elseif w.isStopped %}
+                                    <span class="badge badge-red">{{ w.status }}</span>
+                                {% else %}
+                                    <span class="badge badge-yellow">{{ w.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="mono">{{ w.pid ?? '-' }}</td>
+                            <td>
+                                {% if w.uptime is not null %}
+                                    {{ (w.uptime / 3600)|number_format(0) }}h {{ ((w.uptime % 3600) / 60)|number_format(0) }}m
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{% if ws %}{{ ws.handled }}{% else %}-{% endif %}</td>
+                            <td>{% if ws %}<span{% if ws.failed > 0 %} style="color:#dc3545;font-weight:600"{% endif %}>{{ ws.failed }}</span>{% else %}-{% endif %}</td>
+                            <td class="actions">
+                                {% if w.isRunning %}
+                                    <button class="btn btn-danger btn-sm" onclick="workerAction('stop', '{{ w.group }}:{{ w.name }}')">Stop</button>
+                                    <button class="btn btn-warning btn-sm" onclick="workerAction('restart', '{{ w.group }}:{{ w.name }}')">Restart</button>
+                                {% else %}
+                                    <button class="btn btn-success btn-sm" onclick="workerAction('start', '{{ w.group }}:{{ w.name }}')">Start</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ===== QUEUES ===== #}
+    <div class="panel">
+        <h2>Queues <span class="refresh-note">auto-refresh 5s</span></h2>
+        {% set queues = messenger_queues() %}
+        <table>
+            <thead>
+                <tr><th>Queue</th><th>Pending</th><th>Oldest</th></tr>
+            </thead>
+            <tbody>
+            {% for q in queues %}
+                <tr>
+                    <td class="mono">{{ q.name }}</td>
+                    <td><strong>{{ q.messageCount }}</strong></td>
+                    <td>{{ q.oldestMessageAt ? q.oldestMessageAt|date('H:i:s') : '-' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p style="margin-top:10px; font-size:0.85em; color:#666">
+            Total pending: <strong>{{ messenger_total_pending() }}</strong>
+        </p>
+    </div>
+
+</div>
+
+{# ===== HISTORY ===== #}
+{% set stats = messenger_history_stats() %}
+<div class="panel" style="margin-top:20px">
+    <h2>
+        History
+        <span class="refresh-note">auto-refresh 5s</span>
+    </h2>
+    <div class="filters">
+        <span>Status:</span>
+        <button class="btn btn-outline btn-sm active" onclick="setFilter('status', 'all', this)">All</button>
+        <button class="btn btn-outline btn-sm" onclick="setFilter('status', 'handled', this)">
+            Handled <span class="badge badge-green" id="stat-handled">{{ stats.handled }}</span>
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="setFilter('status', 'failed', this)">
+            Failed <span class="badge badge-red" id="stat-failed">{{ stats.failed }}</span>
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="setFilter('status', 'retried', this)">
+            Retried <span class="badge badge-yellow" id="stat-retried">{{ stats.retried }}</span>
+        </button>
+        <span style="margin-left:12px">Queue:</span>
+        <span id="queue-filters">
+            <button class="btn btn-outline btn-sm active" onclick="setFilter('queue', 'all', this)">All</button>
+        </span>
+    </div>
+    <table>
+        <thead>
+            <tr><th>Time</th><th>Message</th><th>Queue</th><th>Status</th><th>Duration</th><th>Memory</th><th>Error</th></tr>
+        </thead>
+        <tbody id="history-list"></tbody>
+    </table>
+    <p id="history-empty" class="empty" style="display:none">No messages processed yet</p>
+</div>
+
+<script>
+    let historyData = [];
+    let activeStatusFilter = 'all';
+    let activeQueueFilter = 'all';
+
+    function setFilter(type, value, btn) {
+        const group = type === 'status'
+            ? btn.closest('.filters').querySelectorAll('span:first-child ~ .btn-outline, .filters > .btn-outline')
+            : btn.parentElement.querySelectorAll('.btn-outline');
+
+        if (type === 'status') {
+            activeStatusFilter = value;
+            document.querySelectorAll('.filters > .btn-outline').forEach(b => b.classList.remove('active'));
+        } else {
+            activeQueueFilter = value;
+            document.getElementById('queue-filters').querySelectorAll('.btn-outline').forEach(b => b.classList.remove('active'));
+        }
+        btn.classList.add('active');
+        renderHistory();
+    }
+
+    function updateQueueFilters() {
+        const queues = [...new Set(historyData.map(e => e.queue_name))].sort();
+        const container = document.getElementById('queue-filters');
+        const existing = [...container.querySelectorAll('.btn-outline')].map(b => b.dataset.queue).filter(Boolean);
+
+        if (JSON.stringify(queues) === JSON.stringify(existing)) return;
+
+        let html = '<button class="btn btn-outline btn-sm' + (activeQueueFilter === 'all' ? ' active' : '') + '" onclick="setFilter(\'queue\', \'all\', this)">All</button>';
+        queues.forEach(q => {
+            html += ` <button class="btn btn-outline btn-sm${activeQueueFilter === q ? ' active' : ''}" data-queue="${q}" onclick="setFilter('queue', '${q}', this)">${q}</button>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderHistory() {
+        const tbody = document.getElementById('history-list');
+        const empty = document.getElementById('history-empty');
+
+        const filtered = historyData.filter(e => {
+            if (activeStatusFilter !== 'all' && e.status !== activeStatusFilter) return false;
+            if (activeQueueFilter !== 'all' && e.queue_name !== activeQueueFilter) return false;
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+
+        empty.style.display = 'none';
+        const statusBadge = s => {
+            const cls = s === 'handled' ? 'badge-green' : s === 'failed' ? 'badge-red' : 'badge-yellow';
+            return `<span class="badge ${cls}">${s}</span>`;
+        };
+        tbody.innerHTML = filtered.map(e => `
+            <tr>
+                <td>${new Date(e.dispatched_at).toLocaleTimeString()}</td>
+                <td class="mono">${e.short_class}</td>
+                <td class="mono">${e.queue_name}</td>
+                <td>${statusBadge(e.status)}</td>
+                <td>${e.duration_ms !== null ? e.duration_ms + 'ms' : '-'}</td>
+                <td>${e.memory_bytes !== null ? (e.memory_bytes / 1024).toFixed(1) + 'KB' : '-'}</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.error || ''}">${e.error || ''}</td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadHistory() {
+        try {
+            const res = await fetch('/api/messenger-monitor/history');
+            const data = await res.json();
+            historyData = data.entries;
+
+            document.getElementById('stat-handled').textContent = data.stats.handled;
+            document.getElementById('stat-failed').textContent = data.stats.failed;
+            document.getElementById('stat-retried').textContent = data.stats.retried;
+
+            updateQueueFilters();
+            renderHistory();
+        } catch (e) {
+            console.error('Failed to load history:', e);
+        }
+    }
+
+    async function workerAction(action, name) {
+        await fetch(`/api/messenger-monitor/workers/${name}/${action}`, { method: 'POST' });
+        setTimeout(() => location.reload(), 500);
+    }
+
+    loadHistory();
+
+    setInterval(() => {
+        loadHistory();
+    }, 5000);
+
+    setTimeout(() => location.reload(), 5000);
+</script>
+
+</body>
+</html>

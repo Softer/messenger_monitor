@@ -1,0 +1,2 @@
+softer_messenger_monitor:
+    resource: '@SoftLabMessengerMonitorBundle/config/routes.php'
