@@ -64,7 +64,7 @@ final class MessageHistoryRecorderTest extends TestCase
                 'messenger_monitor_history',
                 self::callback(function (array $data): bool {
                     return $data['status'] === 'failed'
-                        && $data['error_message'] === 'Something broke';
+                        && str_starts_with($data['error_message'], "Something broke\n#");
                 }),
             );
 

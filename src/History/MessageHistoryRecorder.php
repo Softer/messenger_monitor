@@ -51,7 +51,9 @@ final class MessageHistoryRecorder implements EventSubscriberInterface
 
     public function onFailed(WorkerMessageFailedEvent $event): void
     {
-        $this->record($event, $event->willRetry() ? 'retried' : 'failed', $event->getThrowable()->getMessage());
+        $throwable = $event->getThrowable();
+        $error = $throwable->getMessage() . "\n" . $throwable->getTraceAsString();
+        $this->record($event, $event->willRetry() ? 'retried' : 'failed', $error);
     }
 
     private function record(AbstractWorkerMessageEvent $event, string $status, ?string $errorMessage = null): void
