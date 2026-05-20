@@ -956,6 +956,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     supervisor?: array{
  *         supervisorctl_path?: scalar|Param|null, // Path to supervisorctl binary // Default: "supervisorctl"
  *         process_group?: scalar|Param|null, // Filter by supervisor group name (null = show all) // Default: null
+ *         url?: scalar|Param|null, // Supervisor XML-RPC URL (e.g. http://localhost:9001/RPC2). When set, uses HTTP adapter instead of supervisorctl. // Default: null
  *     },
  *     queue?: array{
  *         connection?: scalar|Param|null, // Doctrine DBAL connection name for messenger_messages table // Default: "default"

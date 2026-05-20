@@ -127,7 +127,11 @@ All paths are relative to `/api/messenger-monitor`.
 
 ## Supervisor connection
 
-By default the bundle runs `supervisorctl` on the local machine. If Supervisor is on a remote host or you don't want to shell out, use the HTTP adapter - it talks to Supervisor's XML-RPC interface over HTTP.
+By default the bundle runs `supervisorctl` on the local machine. If Supervisor is on a remote host or you don't want to shell out, use the HTTP adapter - it talks to Supervisor's XML-RPC interface.
+
+Two transport options:
+
+**HTTP (inet_http_server)**
 
 Enable `inet_http_server` in your `supervisord.conf`:
 
@@ -136,15 +140,31 @@ Enable `inet_http_server` in your `supervisord.conf`:
 port = 127.0.0.1:9001
 ```
 
-Then point the bundle at it:
-
 ```yaml
 softlab_messenger_monitor:
     supervisor:
         url: 'http://127.0.0.1:9001/RPC2'
 ```
 
-Works with `%env()%` too:
+Requires `symfony/http-client`:
+
+```bash
+composer require symfony/http-client
+```
+
+**Unix socket**
+
+Works with the default `unix_http_server` - no extra config in Supervisor needed:
+
+```yaml
+softlab_messenger_monitor:
+    supervisor:
+        url: 'unix:///var/run/supervisor.sock'
+```
+
+No extra dependencies required.
+
+Both options support `%env()%`:
 
 ```yaml
 softlab_messenger_monitor:
@@ -152,11 +172,7 @@ softlab_messenger_monitor:
         url: '%env(SUPERVISOR_URL)%'
 ```
 
-When `url` is set, `supervisorctl_path` is ignored. Requires `symfony/http-client`:
-
-```bash
-composer require symfony/http-client
-```
+When `url` is set, `supervisorctl_path` is ignored.
 
 ## Message history
 

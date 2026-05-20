@@ -8,11 +8,16 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class HttpSupervisorManager implements SupervisorManagerInterface
 {
+    private readonly bool $isUnixSocket;
+    private readonly string $socketPath;
+
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
+        private readonly ?HttpClientInterface $httpClient,
         private readonly string $url,
         private readonly ?string $processGroup = null,
     ) {
+        $this->isUnixSocket = str_starts_with($url, 'unix://');
+        $this->socketPath = $this->isUnixSocket ? substr($url, 7) : '';
     }
 
     public function getWorkers(): array
@@ -127,16 +132,63 @@ final class HttpSupervisorManager implements SupervisorManagerInterface
         $xml = $this->buildRequest($method, $params);
 
         try {
-            $response = $this->httpClient->request('POST', $this->url, [
-                'headers' => ['Content-Type' => 'text/xml'],
-                'body' => $xml,
-                'timeout' => 10,
-            ]);
+            $body = $this->isUnixSocket
+                ? $this->sendViaSocket($xml)
+                : $this->sendViaHttp($xml);
 
-            return $this->parseResponse($response->getContent());
+            if ($body === null) {
+                return null;
+            }
+
+            return $this->parseResponse($body);
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function sendViaHttp(string $xml): string
+    {
+        if ($this->httpClient === null) {
+            throw new \LogicException('HttpClientInterface is required for HTTP transport. Install symfony/http-client.');
+        }
+
+        $response = $this->httpClient->request('POST', $this->url, [
+            'headers' => ['Content-Type' => 'text/xml'],
+            'body' => $xml,
+            'timeout' => 10,
+        ]);
+
+        return $response->getContent();
+    }
+
+    private function sendViaSocket(string $xml): ?string
+    {
+        $socket = @stream_socket_client('unix://' . $this->socketPath, $errno, $errstr, 10);
+
+        if ($socket === false) {
+            return null;
+        }
+
+        try {
+            $request = "POST /RPC2 HTTP/1.0\r\n"
+                . "Content-Type: text/xml\r\n"
+                . "Content-Length: " . \strlen($xml) . "\r\n"
+                . "\r\n"
+                . $xml;
+
+            fwrite($socket, $request);
+
+            $response = '';
+            while (!feof($socket)) {
+                $response .= fread($socket, 8192);
+            }
+        } finally {
+            fclose($socket);
+        }
+
+        $parts = explode("\r\n\r\n", $response, 2);
+
+        return $parts[1] ?? null;
     }
 
     /**

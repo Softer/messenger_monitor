@@ -286,6 +286,30 @@ final class HttpSupervisorManagerTest extends TestCase
         self::assertTrue($workers[0]->isStopped());
     }
 
+    public function testUnixSocketUrlIsDetected(): void
+    {
+        $manager = new HttpSupervisorManager(null, 'unix:///var/run/supervisor.sock');
+
+        // Unix socket with non-existent path returns empty workers (not an exception)
+        self::assertSame([], $manager->getWorkers());
+        self::assertFalse($manager->isAvailable());
+    }
+
+    public function testUnixSocketStartReturnsFalseOnError(): void
+    {
+        $manager = new HttpSupervisorManager(null, 'unix:///nonexistent/supervisor.sock');
+
+        self::assertFalse($manager->startWorker('test'));
+        self::assertFalse($manager->stopWorker('test'));
+    }
+
+    public function testUnixSocketGetWorkerReturnsNullOnError(): void
+    {
+        $manager = new HttpSupervisorManager(null, 'unix:///nonexistent/supervisor.sock');
+
+        self::assertNull($manager->getWorker('test'));
+    }
+
     private function wrapResponse(string $valueXml): string
     {
         return '<?xml version="1.0"?><methodResponse><params><param><value>'
