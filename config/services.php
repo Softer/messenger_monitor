@@ -11,6 +11,7 @@ use SoftLab\MessengerMonitorBundle\History\MessageHistoryProviderInterface;
 use SoftLab\MessengerMonitorBundle\History\MessageHistoryRecorder;
 use SoftLab\MessengerMonitorBundle\Queue\DoctrineQueueStatsProvider;
 use SoftLab\MessengerMonitorBundle\Queue\QueueStatsProviderInterface;
+use SoftLab\MessengerMonitorBundle\Supervisor\HttpSupervisorManager;
 use SoftLab\MessengerMonitorBundle\Supervisor\ProcessSupervisorManager;
 use SoftLab\MessengerMonitorBundle\Twig\MonitorExtension;
 
@@ -22,6 +23,8 @@ return static function (ContainerConfigurator $container): void {
     ;
 
     $services->set(ProcessSupervisorManager::class);
+
+    $services->set(HttpSupervisorManager::class);
 
     $services->set(DoctrineQueueStatsProvider::class);
     $services->alias(QueueStatsProviderInterface::class, DoctrineQueueStatsProvider::class);

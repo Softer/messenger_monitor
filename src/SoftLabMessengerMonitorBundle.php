@@ -8,6 +8,7 @@ use SoftLab\MessengerMonitorBundle\History\DoctrineMessageHistoryProvider;
 use SoftLab\MessengerMonitorBundle\History\MessageHistoryRecorder;
 use SoftLab\MessengerMonitorBundle\Queue\DoctrineQueueStatsProvider;
 use SoftLab\MessengerMonitorBundle\Queue\QueueStatsProviderInterface;
+use SoftLab\MessengerMonitorBundle\Supervisor\HttpSupervisorManager;
 use SoftLab\MessengerMonitorBundle\Supervisor\ProcessSupervisorManager;
 use SoftLab\MessengerMonitorBundle\Supervisor\SupervisorManagerInterface;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -76,6 +77,10 @@ class SoftLabMessengerMonitorBundle extends AbstractBundle
                             ->defaultNull()
                             ->info('Filter by supervisor group name (null = show all)')
                         ->end()
+                        ->scalarNode('url')
+                            ->defaultNull()
+                            ->info('Supervisor XML-RPC URL (e.g. http://localhost:9001/RPC2). When set, uses HTTP adapter instead of supervisorctl.')
+                        ->end()
                     ->end()
                 ->end()
                 ->arrayNode('queue')
@@ -131,11 +136,21 @@ class SoftLabMessengerMonitorBundle extends AbstractBundle
     {
         $container->import('../config/services.php');
 
+        $supervisorUrl = $config['supervisor']['url'];
+
         $container->services()
             ->get(ProcessSupervisorManager::class)
             ->arg('$supervisorctlPath', $config['supervisor']['supervisorctl_path'])
             ->arg('$processGroup', $config['supervisor']['process_group'])
         ;
+
+        if ($supervisorUrl !== null) {
+            $container->services()
+                ->get(HttpSupervisorManager::class)
+                ->arg('$url', $supervisorUrl)
+                ->arg('$processGroup', $config['supervisor']['process_group'])
+            ;
+        }
 
         $container->services()
             ->get(DoctrineQueueStatsProvider::class)
@@ -160,7 +175,11 @@ class SoftLabMessengerMonitorBundle extends AbstractBundle
             $builder->removeDefinition(MessageHistoryRecorder::class);
         }
 
-        $builder->setAlias(SupervisorManagerInterface::class, ProcessSupervisorManager::class);
+        $implementation = $supervisorUrl !== null
+            ? HttpSupervisorManager::class
+            : ProcessSupervisorManager::class;
+
+        $builder->setAlias(SupervisorManagerInterface::class, $implementation);
     }
 
 }

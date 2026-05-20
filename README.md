@@ -1,10 +1,10 @@
 # Softer Messenger Monitor Bundle
 
-Symfony bundle that monitors Messenger queues by reading worker status directly from Supervisor. No cache, no heartbeats, no race conditions - just asks `supervisorctl` every time.
+Symfony bundle that monitors Messenger queues by reading worker status directly from Supervisor. No cache, no heartbeats, no race conditions - just asks Supervisor every time (via `supervisorctl` or XML-RPC over HTTP).
 
 ## What it does
 
-- Gets worker status from `supervisorctl` with start/stop/restart control
+- Gets worker status from Supervisor with start/stop/restart control (via CLI or HTTP)
 - Counts pending messages per queue (Doctrine transport)
 - Tracks message processing history: handled, failed, retried - with duration and memory usage
 - Lists failed messages with retry/remove
@@ -37,6 +37,7 @@ softlab_messenger_monitor:
     supervisor:
         supervisorctl_path: supervisorctl   # path to binary
         process_group: ~                    # filter by group (null = all)
+        url: ~                              # XML-RPC URL (see below)
     queue:
         connection: default                 # Doctrine DBAL connection
         table_name: messenger_messages
@@ -123,6 +124,39 @@ softlab_messenger_monitor:
 | GET | `/history` | Processing history with stats |
 
 All paths are relative to `/api/messenger-monitor`.
+
+## Supervisor connection
+
+By default the bundle runs `supervisorctl` on the local machine. If Supervisor is on a remote host or you don't want to shell out, use the HTTP adapter - it talks to Supervisor's XML-RPC interface over HTTP.
+
+Enable `inet_http_server` in your `supervisord.conf`:
+
+```ini
+[inet_http_server]
+port = 127.0.0.1:9001
+```
+
+Then point the bundle at it:
+
+```yaml
+softlab_messenger_monitor:
+    supervisor:
+        url: 'http://127.0.0.1:9001/RPC2'
+```
+
+Works with `%env()%` too:
+
+```yaml
+softlab_messenger_monitor:
+    supervisor:
+        url: '%env(SUPERVISOR_URL)%'
+```
+
+When `url` is set, `supervisorctl_path` is ignored. Requires `symfony/http-client`:
+
+```bash
+composer require symfony/http-client
+```
 
 ## Message history
 

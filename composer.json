@@ -12,13 +12,14 @@
     ],
     "require": {
         "php": ">=8.2",
-        "symfony/messenger": "^7.0|^8.0",
-        "symfony/process": "^7.0|^8.0",
-        "symfony/http-kernel": "^7.0|^8.0",
-        "symfony/dependency-injection": "^7.0|^8.0",
-        "symfony/config": "^7.0|^8.0",
         "doctrine/dbal": "^3.6|^4.0",
-        "doctrine/persistence": "^3.0|^4.0"
+        "doctrine/persistence": "^3.0|^4.0",
+        "symfony/config": "^7.0|^8.0",
+        "symfony/dependency-injection": "^7.0|^8.0",
+        "symfony/http-client-contracts": "^3.7",
+        "symfony/http-kernel": "^7.0|^8.0",
+        "symfony/messenger": "^7.0|^8.0",
+        "symfony/process": "^7.0|^8.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",
@@ -29,7 +30,8 @@
     },
     "suggest": {
         "symfony/twig-bundle": "For Twig functions",
-        "symfony/doctrine-messenger": "For Doctrine transport support"
+        "symfony/doctrine-messenger": "For Doctrine transport support",
+        "symfony/http-client": "For Supervisor XML-RPC HTTP adapter"
     },
     "autoload": {
         "psr-4": {
